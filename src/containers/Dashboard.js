@@ -72,6 +72,10 @@ export default class {
     this.document = document
     this.onNavigate = onNavigate
     this.store = store
+    // Etat d'ouverture par section (1: pending, 2: accepted, 3: refused)
+    this.sectionOpenState = {}
+    // Ticket actuellement sélectionné (id) pour gérer l'alternance ouvrir/fermer
+    this.currentlyEditingId = null
     $('#arrow-icon1').click((e) => this.handleShowTickets(e, bills, 1))
     $('#arrow-icon2').click((e) => this.handleShowTickets(e, bills, 2))
     $('#arrow-icon3').click((e) => this.handleShowTickets(e, bills, 3))
@@ -86,24 +90,25 @@ export default class {
   }
 
   handleEditTicket(e, bill, bills) {
-    if (this.counter === undefined || this.id !== bill.id) this.counter = 0
-    if (this.id === undefined || this.id !== bill.id) this.id = bill.id
-    if (this.counter % 2 === 0) {
-      bills.forEach(b => {
-        $(`#open-bill${b.id}`).css({ background: '#0D5AE5' })
-      })
+    const isSameBill = this.currentlyEditingId === bill.id
+
+    if (!isSameBill) {
+      // Réinitialise le style de toutes les cartes visibles
+      $('.bill-card').css({ background: '#0D5AE5' })
+      // Active la carte sélectionnée
       $(`#open-bill${bill.id}`).css({ background: '#2A2B35' })
+      // Affiche le formulaire du ticket
       $('.dashboard-right-container div').html(DashboardFormUI(bill))
       $('.vertical-navbar').css({ height: '150vh' })
-      this.counter ++
+      this.currentlyEditingId = bill.id
     } else {
+      // Désélectionne si on reclique sur le même ticket
       $(`#open-bill${bill.id}`).css({ background: '#0D5AE5' })
-
       $('.dashboard-right-container div').html(`
         <div id="big-billed-icon" data-testid="big-billed-icon"> ${BigBilledIcon} </div>
       `)
       $('.vertical-navbar').css({ height: '120vh' })
-      this.counter ++
+      this.currentlyEditingId = null
     }
     $('#icon-eye-d').click(this.handleClickIconEye)
     $('#btn-accept-bill').click((e) => this.handleAcceptSubmit(e, bill))
@@ -131,24 +136,24 @@ export default class {
   }
 
   handleShowTickets(e, bills, index) {
-    if (this.counter === undefined || this.index !== index) this.counter = 0
-    if (this.index === undefined || this.index !== index) this.index = index
-    if (this.counter % 2 === 0) {
-      $(`#arrow-icon${this.index}`).css({ transform: 'rotate(0deg)'})
-      $(`#status-bills-container${this.index}`)
-        .html(cards(filteredBills(bills, getStatus(this.index))))
-      this.counter ++
+    const isOpen = this.sectionOpenState[index] === true
+    const containerSelector = `#status-bills-container${index}`
+    const arrowSelector = `#arrow-icon${index}`
+
+    if (!isOpen) {
+      $(arrowSelector).css({ transform: 'rotate(0deg)'})
+      const billsForStatus = filteredBills(bills, getStatus(index))
+      $(containerSelector).html(cards(billsForStatus))
+      // Attache les événements uniquement pour cette section
+      billsForStatus.forEach(bill => {
+        $(`#open-bill${bill.id}`).off('click').on('click', (e) => this.handleEditTicket(e, bill, bills))
+      })
     } else {
-      $(`#arrow-icon${this.index}`).css({ transform: 'rotate(90deg)'})
-      $(`#status-bills-container${this.index}`)
-        .html("")
-      this.counter ++
+      $(arrowSelector).css({ transform: 'rotate(90deg)'})
+      $(containerSelector).html("")
     }
 
-    bills.forEach(bill => {
-      $(`#open-bill${bill.id}`).click((e) => this.handleEditTicket(e, bill, bills))
-    })
-
+    this.sectionOpenState[index] = !isOpen
     return bills
 
   }
