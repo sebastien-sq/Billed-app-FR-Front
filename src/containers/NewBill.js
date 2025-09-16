@@ -18,8 +18,17 @@ export default class NewBill {
   handleChangeFile = e => {
     e.preventDefault()
     const file = this.document.querySelector(`input[data-testid="file"]`).files[0]
-    const filePath = e.target.value.split(/\\/g)
-    const fileName = filePath[filePath.length-1]
+    const filePathParts = e.target.value.split(/\\/g)
+    const fileName = filePathParts[filePathParts.length-1]
+    const isValidImage = file && /\.(jpg|jpeg|png)$/i.test(fileName)
+    if (!isValidImage) {
+      alert('Format non supporté. Formats acceptés: JPG, JPEG, PNG.')
+      e.target.value = ""
+      this.fileUrl = null
+      this.fileName = null
+      this.billId = null
+      return
+    }
     const formData = new FormData()
     const email = JSON.parse(localStorage.getItem("user")).email
     formData.append('file', file)
@@ -33,10 +42,12 @@ export default class NewBill {
           noContentType: true
         }
       })
-      .then(({fileUrl, key}) => {
-        console.log(fileUrl)
-        this.billId = key
-        this.fileUrl = fileUrl
+      .then((response) => {
+        const returnedFileUrl = response && (response.fileUrl || response.url)
+        const returnedKey = response && (response.key || response.id)
+        console.log(returnedFileUrl)
+        this.billId = returnedKey
+        this.fileUrl = returnedFileUrl
         this.fileName = fileName
       }).catch(error => console.error(error))
   }
