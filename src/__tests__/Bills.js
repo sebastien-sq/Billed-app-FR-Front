@@ -12,6 +12,28 @@ import router from "../app/Router.js";
 
 jest.mock("../app/store", () => mockStore)
 
+// Mock jQuery globally for all tests
+global.$ = jest.fn(() => ({
+  width: jest.fn(() => 800),
+  find: jest.fn(() => ({
+    html: jest.fn()
+  })),
+  modal: jest.fn(),
+  click: jest.fn(),
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  off: jest.fn(),
+  on: jest.fn(),
+  css: jest.fn(),
+  addClass: jest.fn(),
+  removeClass: jest.fn(),
+  classList: {
+    contains: jest.fn(),
+    add: jest.fn(),
+    remove: jest.fn()
+  }
+}))
+
 describe("Given I am connected as an employee", () => {
   describe("When I am on Bills Page", () => {
     test("Then bill icon in vertical layout should be highlighted", async () => {
@@ -38,6 +60,126 @@ describe("Given I am connected as an employee", () => {
       const antiChrono = (a, b) => ((a < b) ? 1 : -1)
       const datesSorted = [...dates].sort(antiChrono)
       expect(dates).toEqual(datesSorted)
+    })
+  })
+
+  describe("When I interact with handleClickNewBill function", () => {
+    test("Then it should navigate to NewBill page", () => {
+      // Arrange
+      const mockOnNavigate = jest.fn()
+      const billsContainer = new (require("../containers/Bills.js")).default({
+        document,
+        onNavigate: mockOnNavigate,
+        store: mockStore,
+        localStorage: window.localStorage
+      })
+
+      // Act
+      billsContainer.handleClickNewBill()
+
+      // Assert
+      expect(mockOnNavigate).toHaveBeenCalledWith(ROUTES_PATH['NewBill'])
+    })
+  })
+
+  describe("When I interact with handleClickIconEye function", () => {
+    test("Then it should display modal with bill image", () => {
+      // Arrange
+      const mockOnNavigate = jest.fn()
+      const mockHtml = jest.fn()
+      const mockModal = jest.fn()
+      const mockFind = jest.fn(() => ({ html: mockHtml }))
+      const mockWidth = jest.fn(() => 800)
+      
+      // Reset and setup jQuery mock
+      global.$ = jest.fn(() => ({
+        width: mockWidth,
+        find: mockFind,
+        modal: mockModal,
+        click: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        off: jest.fn(),
+        on: jest.fn(),
+        css: jest.fn(),
+        addClass: jest.fn(),
+        removeClass: jest.fn(),
+        classList: {
+          contains: jest.fn(),
+          add: jest.fn(),
+          remove: jest.fn()
+        }
+      }))
+
+      const billsContainer = new (require("../containers/Bills.js")).default({
+        document,
+        onNavigate: mockOnNavigate,
+        store: mockStore,
+        localStorage: window.localStorage
+      })
+
+      const mockIcon = {
+        getAttribute: jest.fn(() => "http://example.com/bill.jpg")
+      }
+
+      // Act
+      billsContainer.handleClickIconEye(mockIcon)
+
+      // Assert
+      expect(mockIcon.getAttribute).toHaveBeenCalledWith("data-bill-url")
+      expect(global.$).toHaveBeenCalledWith('#modaleFile')
+      expect(mockFind).toHaveBeenCalledWith(".modal-body")
+      expect(mockHtml).toHaveBeenCalledWith(expect.stringContaining('bill-proof-container'))
+      expect(mockModal).toHaveBeenCalledWith('show')
+    })
+
+    test("Then it should calculate correct image width", () => {
+      // Arrange
+      const mockOnNavigate = jest.fn()
+      const mockHtml = jest.fn()
+      const mockModal = jest.fn()
+      const mockFind = jest.fn(() => ({ html: mockHtml }))
+      const mockWidth = jest.fn(() => 1000) // Modal width of 1000px
+      
+      // Reset and setup jQuery mock
+      global.$ = jest.fn(() => ({
+        width: mockWidth,
+        find: mockFind,
+        modal: mockModal,
+        click: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        off: jest.fn(),
+        on: jest.fn(),
+        css: jest.fn(),
+        addClass: jest.fn(),
+        removeClass: jest.fn(),
+        classList: {
+          contains: jest.fn(),
+          add: jest.fn(),
+          remove: jest.fn()
+        }
+      }))
+
+      const billsContainer = new (require("../containers/Bills.js")).default({
+        document,
+        onNavigate: mockOnNavigate,
+        store: mockStore,
+        localStorage: window.localStorage
+      })
+
+      const mockIcon = {
+        getAttribute: jest.fn(() => "http://example.com/bill.jpg")
+      }
+
+      // Act
+      billsContainer.handleClickIconEye(mockIcon)
+
+      // Assert
+      // Image width should be 50% of modal width (1000 * 0.5 = 500)
+      expect(mockHtml).toHaveBeenCalledWith(
+        expect.stringContaining('width=500')
+      )
     })
   })
 })
